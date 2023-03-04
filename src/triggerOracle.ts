@@ -73,7 +73,7 @@ const handler = async (
             ], wallet)
             const decimals = await tokenContract.decimals()
             const timestamp = group[0].nextPayment
-            const price = await getRollingPrice24h(chainId, token.toLowerCase(), timestamp)
+            const price = await getRollingPrice24h(chainId, token.toLowerCase(), currentTime)
             const decimalOffset = 10 ** (18 - Number(decimals))
             const formattedPrice = BigInt(1e28 / (price * decimalOffset)).toString()
             //console.log(price, group.map(p=>p.streamId), token, formattedPrice, timestamp)
