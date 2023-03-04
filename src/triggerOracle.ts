@@ -1,6 +1,6 @@
 import { ethers } from "ethers"
 import request, { gql } from "graphql-request";
-import { getRollingPrice24h, now } from "./llamapay/getPrice";
+import { getRollingPrice24h, now } from "./prices/getPrice";
 
 interface Payment {
     streamId: string;

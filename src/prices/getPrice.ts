@@ -1,6 +1,6 @@
 import fetch from "node-fetch";
 
-export function findMedian(points:number[]){
+function findMedian(points:number[]){
     return points.sort()[Math.round(points.length/2)]
 }
 
