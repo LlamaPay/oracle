@@ -52,8 +52,8 @@ Docs: https://binance-docs.github.io/apidocs/spot/en/#compressed-aggregate-trade
 export const now = () => Math.floor(Date.now()/1e3)
 const DAY = 24*3600
 
-export async function getRollingPrice24h(chainId:number, token:string, timestamp:number){
-    const end = Math.min(timestamp + DAY/2, now());
+export async function getRollingPrice24h(chainId:number, token:string){
+    const end = now();
     const start = end - DAY;
     const tokenIds = tokens[chainId]?.[token]
     if(tokenIds === undefined || tokenIds.length !== 2){

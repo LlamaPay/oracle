@@ -1,6 +1,6 @@
 import { ethers } from "ethers"
 import request, { gql } from "graphql-request";
-import { getRollingPrice24h, now } from "./prices/getPrice";
+import { getRollingPrice24h, now, weeklyAveragePriceCg } from "./prices/getPrice";
 
 interface Payment {
     streamId: string;
@@ -36,11 +36,9 @@ const Payments = gql`
     }
 }`
 
-const handler = async (
-    _event: AWSLambda.APIGatewayEvent
-): Promise<any> => {
+async function triggerOracleForChain(subgraphUrl:string, rpcUrl:string, priceFunction:(chain:number, token:string)=>Promise<number>){
     const currentTime = now()
-    const { payments } = (await request("https://api.thegraph.com/subgraphs/name/nemusonaneko/scheduledtransfers-optimism", Payments)) as {
+    const { payments } = (await request(subgraphUrl, Payments)) as {
         payments: Payment[]
     }
     const paymentsReady = payments.map(p => {
@@ -59,7 +57,7 @@ const handler = async (
         return acc
     }, {} as { [id: string]: PPayment[] }))
 
-    const wallet = new ethers.Wallet(process.env.LLAMAPAY_ORACLE_PRIVATE_KEY!, new ethers.providers.JsonRpcProvider("https://mainnet.optimism.io"))
+    const wallet = new ethers.Wallet(process.env.LLAMAPAY_ORACLE_PRIVATE_KEY!, new ethers.providers.JsonRpcProvider(rpcUrl))
     const chainId = await wallet.getChainId()
     for (const group of groups) {
         const contractAddress = group[0].pool.poolContract
@@ -73,7 +71,7 @@ const handler = async (
             ], wallet)
             const decimals = await tokenContract.decimals()
             const timestamp = group[0].nextPayment
-            const price = await getRollingPrice24h(chainId, token.toLowerCase(), currentTime)
+            const price = await priceFunction(chainId, token.toLowerCase())
             const decimalOffset = 10 ** (18 - Number(decimals))
             const formattedPrice = BigInt(1e28 / (price * decimalOffset)).toString()
             //console.log(price, group.map(p=>p.streamId), token, formattedPrice, timestamp)
@@ -82,6 +80,13 @@ const handler = async (
             console.error(`Couldn't handle withdrawals for pool ${contractAddress}`, e)
         }
     }
+}
+
+const handler = async (): Promise<any> => {
+    await Promise.all([
+        triggerOracleForChain("https://api.thegraph.com/subgraphs/name/nemusonaneko/scheduledtransfers-optimism", "https://mainnet.optimism.io", getRollingPrice24h),
+        triggerOracleForChain("https://api.thegraph.com/subgraphs/name/nemusonaneko/scheduled-transfers-mainnet", "https://eth.llamarpc.com", weeklyAveragePriceCg)
+    ])
 
     return {
         statusCode: 200,
