@@ -4,8 +4,24 @@ function findMedian(points:number[]){
     return points.sort()[Math.round(points.length/2)]
 }
 
-async function cg(token:string, start:number, end:number){
+function twap(prices:[number, number][]){ // [timestamp, price]
+    const sorted = prices.sort((a, b)=>a[0]-b[0])
+    let twap = 0;
+    for(let i=1; i<sorted.length; i++){
+        const deltaTime = sorted[i][0]-sorted[i-1][0]
+        const avgPrice = (sorted[i][1] + sorted[i-1][1])/2
+        twap += deltaTime*avgPrice
+    }
+    return twap/(sorted[sorted.length-1][0]-sorted[0][0])
+}
+
+async function cgPrices(token:string, start:number, end:number){
     const {prices} = await fetch(`https://api.coingecko.com/api/v3/coins/${token}/market_chart/range?vs_currency=usd&from=${start}&to=${end}`).then(r=>r.json())
+    return prices
+}
+
+async function cg(token:string, start:number, end:number){
+    const prices = await cgPrices(token, start, end)
     return findMedian(prices.map((p:any)=>p[1]))
 }
 
@@ -40,7 +56,7 @@ export async function getRollingPrice24h(chainId:number, token:string, timestamp
     const end = Math.min(timestamp + DAY/2, now());
     const start = end - DAY;
     const tokenIds = tokens[chainId]?.[token]
-    if(tokenIds === undefined){
+    if(tokenIds === undefined || tokenIds.length !== 2){
         throw new Error(`Token ${chainId}:${token} is not recognized`)
     }
     const results = await Promise.all([
@@ -54,9 +70,21 @@ export async function getRollingPrice24h(chainId:number, token:string, timestamp
     return (results[0]+results[1])/2
 }
 
+export async function weeklyAveragePriceCg(chainId:number, token:string){
+    const end = now();
+    const start = end - 7*DAY;
+    const tokenIds = tokens[chainId]?.[token]
+    if(tokenIds === undefined){
+        throw new Error(`Token ${chainId}:${token} is not recognized`)
+    }
+    const results = await cgPrices(tokenIds[0], start, end)
+    return twap(results)
+}
+
 const tokens = {
     1:{
         "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": ["bitcoin", "BTCUSDT"], // WBTC
+        "0x1e4746dc744503b53b4a082cb3607b169a289090": ["ipor"],
     },
     5:{
         "0x58d7ccbe88fe805665eb0b6c219f2c27d351e649": ["ethereum", "ETHUSDT"], // ETH from https://token-faucet.defillama.com/
