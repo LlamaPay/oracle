@@ -84,7 +84,7 @@ async function triggerOracleForChain(subgraphUrl:string, rpcUrl:string, priceFun
 
 const handler = async (): Promise<any> => {
     await Promise.all([
-        triggerOracleForChain("https://api.thegraph.com/subgraphs/name/nemusonaneko/scheduledtransfers-optimism", "https://mainnet.optimism.io", getRollingPrice24h),
+        triggerOracleForChain("https://api.thegraph.com/subgraphs/name/nemusonaneko/scheduledtransfers-optimism", "https://rpc.ankr.com/optimism", getRollingPrice24h),
         triggerOracleForChain("https://api.thegraph.com/subgraphs/name/nemusonaneko/scheduled-transfers-mainnet", "https://eth.llamarpc.com", weeklyAveragePriceCg)
     ])
 
